@@ -1,13 +1,7 @@
 {
-  "name": "mental-wellness-app",
+  "name": "nallas-hack-mental-wellness",
   "version": "1.0.0",
-  "private": true,
   "scripts": {
-    "build": "cd frontend && npm ci && npm run build",
-    "start": "cd frontend && npm start",
-    "install:frontend": "cd frontend && npm install"
-  },
-  "workspaces": [
-    "frontend"
-  ]
+    "build": "cd frontend && npm install && npm run build"
+  }
 }
