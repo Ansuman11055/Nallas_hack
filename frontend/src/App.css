@@ -1,0 +1,50 @@
+.App {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.App-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.App-main {
+  padding-bottom: 50px;
+}
+
+.connection-status {
+  text-align: center;
+  padding: 5px;
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.connection-status.online {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4CAF50;
+}
+
+.connection-status.offline {
+  background: rgba(244, 67, 54, 0.1);
+  color: #f44336;
+}
+
+/* Animations */
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .App-main {
+    padding: 10px;
+  }
+}
+
