@@ -1,12 +1,15 @@
 import React from 'react';
 import Dashboard from './components/Dashboard/Dashboard';
+import CacheBuster from './components/CacheBuster';
 import './App.css';
 
 function App() {
   return (
-    <div className="App">
-      <Dashboard />
-    </div>
+    <CacheBuster>
+      <div className="App">
+        <Dashboard />
+      </div>
+    </CacheBuster>
   );
 }
 

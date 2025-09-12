@@ -2,33 +2,271 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#4CC3D9" />
-    <meta name="description" content="Mental Wellness PWA - Your personal wellness companion" />
-    <link rel="manifest" href="/manifest.json" />
-    <title>Mental Wellness App</title>
+    <meta name="theme-color" content="#667eea" />
+    
+    <!-- Cache Busting Meta Tags -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <meta name="cache-version" content="2.1.0" />
+    
+    <!-- SEO and App Info -->
+    <meta name="description" content="Mental Wellness Dashboard - AI-powered mental health support and mood tracking" />
+    <meta name="keywords" content="mental health, wellness, mood tracking, AI support, meditation, mindfulness" />
+    <meta name="author" content="Mental Wellness Team" />
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mental Wellness Dashboard" />
+    <meta property="og:description" content="AI-powered mental health support with mood tracking and personalized care" />
+    <meta property="og:image" content="%PUBLIC_URL%/logo192.png" />
+    
+    <!-- Progressive Web App Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Mental Wellness" />
+    
+    <!-- Manifest and Icons -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Three.js CDN for 3D backgrounds -->
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" as="script">
+    
+    <!-- Performance and Security -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="robots" content="index, follow" />
+    <meta name="format-detection" content="telephone=no" />
+    
+    <!-- App Title -->
+    <title>Mental Wellness Dashboard</title>
+    
     <style>
+      /* Critical CSS for faster initial load */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
       body {
         margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
+        overflow-x: hidden;
       }
-      .loading {
+      
+      /* Loading screen styles */
+      .initial-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
-        height: 100vh;
+        justify-content: center;
         color: white;
-        font-size: 1.2em;
+        font-family: 'Inter', sans-serif;
+        z-index: 9999;
+        transition: opacity 0.5s ease;
+      }
+      
+      .loader-icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        animation: pulse 2s infinite;
+      }
+      
+      .loader-text {
+        font-size: 1.2rem;
+        font-weight: 500;
+        margin-bottom: 30px;
+        opacity: 0.9;
+      }
+      
+      .loader-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top-color: white;
+        animation: spin 1s ease-in-out infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% { transform: scale(1); opacity: 0.8; }
+        50% { transform: scale(1.1); opacity: 1; }
+      }
+      
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      
+      /* Hide loader when app loads */
+      .app-loaded .initial-loader {
+        opacity: 0;
+        pointer-events: none;
+      }
+      
+      #root {
+        min-height: 100vh;
+      }
+      
+      /* Smooth transitions */
+      * {
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+      }
+      
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+      }
+      
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.5);
+      }
+      
+      /* Accessibility improvements */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+      
+      /* High contrast mode support */
+      @media (prefers-contrast: high) {
+        body {
+          background: #000;
+          color: #fff;
+        }
       }
     </style>
   </head>
   <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root">
-      <div class="loading">🧠 Loading Mental Wellness App...</div>
+    <!-- Initial Loading Screen -->
+    <div class="initial-loader" id="initialLoader">
+      <div class="loader-icon">🧠</div>
+      <div class="loader-text">Mental Wellness Dashboard</div>
+      <div class="loader-spinner"></div>
     </div>
+    
+    <noscript>
+      <div style="text-align: center; padding: 50px; color: white; font-family: Arial, sans-serif;">
+        <h2>JavaScript Required</h2>
+        <p>You need to enable JavaScript to run this Mental Wellness application.</p>
+        <p>Please enable JavaScript in your browser settings and refresh the page.</p>
+      </div>
+    </noscript>
+    
+    <div id="root"></div>
+    
+    <script>
+      // Cache busting and version check
+      (function() {
+        const currentVersion = '2.1.0';
+        const cachedVersion = localStorage.getItem('app-cache-version');
+        
+        if (cachedVersion && cachedVersion !== currentVersion) {
+          console.log('New version detected, clearing cache...');
+          
+          // Clear service worker cache
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+              }
+            });
+          }
+          
+          // Clear browser cache
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) {
+                caches.delete(name);
+              }
+            });
+          }
+          
+          localStorage.setItem('app-cache-version', currentVersion);
+        } else {
+          localStorage.setItem('app-cache-version', currentVersion);
+        }
+        
+        // Hide loader when React app loads
+        window.addEventListener('load', function() {
+          setTimeout(function() {
+            document.body.classList.add('app-loaded');
+            setTimeout(function() {
+              const loader = document.getElementById('initialLoader');
+              if (loader) {
+                loader.remove();
+              }
+            }, 500);
+          }, 1000);
+        });
+        
+        // Performance monitoring
+        if ('performance' in window) {
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              const perfData = performance.getEntriesByType('navigation')[0];
+              console.log('Page load time:', Math.round(perfData.loadEventEnd - perfData.loadEventStart), 'ms');
+            }, 1000);
+          });
+        }
+      })();
+      
+      // Service Worker registration (optional)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/service-worker.js')
+            .then(function(registration) {
+              console.log('SW registered: ', registration);
+            })
+            .catch(function(registrationError) {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+      
+      // Error boundary for uncaught errors
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error);
+        // You could send this to an error reporting service
+      });
+      
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled promise rejection:', e.reason);
+        // You could send this to an error reporting service
+      });
+    </script>
   </body>
 </html>
-
