@@ -1,5 +1,10 @@
 {
   "buildCommand": "cd frontend && npm install --force && npm run build",
   "outputDirectory": "frontend/build",
-  "installCommand": "cd frontend && npm install --force"
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
 }

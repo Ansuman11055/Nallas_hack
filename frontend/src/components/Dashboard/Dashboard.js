@@ -1,181 +1,200 @@
 import React, { useState, useEffect } from 'react';
+import './Dashboard.css';
 
-function Dashboard() {
-  const [userName, setUserName] = useState('Friend');
-  const [todayMood, setTodayMood] = useState(null);
-  const [recentActivity, setRecentActivity] = useState([]);
+const Dashboard = () => {
+  const [userStats, setUserStats] = useState({
+    totalSessions: 0,
+    moodScore: 0,
+    streakDays: 0,
+    completedActivities: 0
+  });
+
+  const [recentActivities, setRecentActivities] = useState([]);
+  const [moodHistory, setMoodHistory] = useState([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
-    // Load user data from localStorage
-    const savedName = localStorage.getItem('userName') || 'Friend';
-    const savedMood = localStorage.getItem('todayMood');
-    setUserName(savedName);
-    setTodayMood(savedMood ? parseInt(savedMood) : null);
+    // Simulate fetching user stats
+    const fetchUserStats = () => {
+      setUserStats({
+        totalSessions: 24,
+        moodScore: 7.2,
+        streakDays: 5,
+        completedActivities: 18
+      });
+    };
+
+    // Simulate fetching recent activities
+    const fetchRecentActivities = () => {
+      const activities = [
+        { id: 1, activity: 'Meditation Session', time: '2 hours ago', type: 'meditation' },
+        { id: 2, activity: 'Mood Check-in', time: '4 hours ago', type: 'mood' },
+        { id: 3, activity: 'Breathing Exercise', time: '1 day ago', type: 'breathing' },
+        { id: 4, activity: 'Gratitude Journal', time: '1 day ago', type: 'journal' },
+        { id: 5, activity: 'Sleep Tracking', time: '2 days ago', type: 'sleep' }
+      ];
+      setRecentActivities(activities);
+    };
+
+    // Simulate mood history data
+    const fetchMoodHistory = () => {
+      const history = [
+        { day: 'Mon', mood: 6 },
+        { day: 'Tue', mood: 7 },
+        { day: 'Wed', mood: 8 },
+        { day: 'Thu', mood: 6 },
+        { day: 'Fri', mood: 9 },
+        { day: 'Sat', mood: 7 },
+        { day: 'Sun', mood: 8 }
+      ];
+      setMoodHistory(history);
+    };
+
+    fetchUserStats();
+    fetchRecentActivities();
+    fetchMoodHistory();
+
+    // Update time every minute
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000);
+
+    return () => clearInterval(timer);
   }, []);
 
-  const quickMoodLog = (mood) => {
-    localStorage.setItem('todayMood', mood);
-    setTodayMood(mood);
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
   };
 
-  const getMoodEmoji = (mood) => {
-    const moods = ['😢', '😕', '😐', '🙂', '😊', '😄', '🤗', '😆', '🥰', '🤩'];
-    return moods[mood - 1] || '😐';
+  const getMoodColor = (mood) => {
+    if (mood >= 8) return '#4CAF50';
+    if (mood >= 6) return '#FF9800';
+    return '#F44336';
   };
+
+  const StatCard = ({ title, value, icon, color }) => (
+    <div className="stat-card">
+      <div className="stat-icon" style={{ backgroundColor: color }}>
+        {icon}
+      </div>
+      <div className="stat-content">
+        <h3>{value}</h3>
+        <p>{title}</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div style={styles.dashboard}>
-      <div style={styles.header}>
-        <h1>Welcome back, {userName}! 🌟</h1>
-        <p style={styles.subtitle}>How are you feeling today?</p>
-      </div>
+    <div className="dashboard">
+      <header className="dashboard-header">
+        <div className="greeting">
+          <h1>{getGreeting()}, User!</h1>
+          <p>Let's check in on your mental wellness journey</p>
+        </div>
+        <div className="current-time">
+          {currentTime.toLocaleDateString()} - {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+      </header>
 
-      <div style={styles.statsGrid}>
-        <div style={styles.statCard}>
-          <h3>Today's Mood</h3>
-          {todayMood ? (
-            <div style={styles.moodDisplay}>
-              <span style={styles.moodEmoji}>{getMoodEmoji(todayMood)}</span>
-              <span>{todayMood}/10</span>
+      <div className="dashboard-content">
+        <div className="stats-grid">
+          <StatCard
+            title="Total Sessions"
+            value={userStats.totalSessions}
+            icon="📊"
+            color="#3498db"
+          />
+          <StatCard
+            title="Current Mood"
+            value={`${userStats.moodScore}/10`}
+            icon="😊"
+            color="#2ecc71"
+          />
+          <StatCard
+            title="Streak Days"
+            value={userStats.streakDays}
+            icon="🔥"
+            color="#e74c3c"
+          />
+          <StatCard
+            title="Activities Completed"
+            value={userStats.completedActivities}
+            icon="✅"
+            color="#f39c12"
+          />
+        </div>
+
+        <div className="dashboard-main">
+          <div className="left-section">
+            <div className="mood-chart">
+              <h2>Weekly Mood Tracker</h2>
+              <div className="mood-bars">
+                {moodHistory.map((day, index) => (
+                  <div key={index} className="mood-day">
+                    <div 
+                      className="mood-bar"
+                      style={{ 
+                        height: `${day.mood * 10}%`,
+                        backgroundColor: getMoodColor(day.mood)
+                      }}
+                    />
+                    <span>{day.day}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <p>Not logged yet</p>
-          )}
-        </div>
 
-        <div style={styles.statCard}>
-          <h3>Streak</h3>
-          <p style={styles.streakNumber}>7 days</p>
-        </div>
+            <div className="wellness-tools">
+              <h2>Wellness Tools</h2>
+              <div className="tools-grid">
+                <button className="tool-btn meditation">🧘‍♀️ Guided Meditation</button>
+                <button className="tool-btn breathing">💨 Breathing Exercises</button>
+                <button className="tool-btn music">🎵 Relaxing Music</button>
+                <button className="tool-btn journal">📝 Mood Journal</button>
+                <button className="tool-btn sleep">😴 Sleep Stories</button>
+                <button className="tool-btn mindfulness">🌿 Mindfulness</button>
+              </div>
+            </div>
+          </div>
 
-        <div style={styles.statCard}>
-          <h3>This Week</h3>
-          <p>Average mood: 7.2/10</p>
-        </div>
-      </div>
+          <div className="right-section">
+            <div className="recent-activity">
+              <h2>Recent Activity</h2>
+              <div className="activity-list">
+                {recentActivities.map((activity) => (
+                  <div key={activity.id} className="activity-item">
+                    <div className={`activity-icon ${activity.type}`}>
+                      {activity.type === 'meditation' && '🧘‍♀️'}
+                      {activity.type === 'mood' && '😊'}
+                      {activity.type === 'breathing' && '💨'}
+                      {activity.type === 'journal' && '📝'}
+                      {activity.type === 'sleep' && '😴'}
+                    </div>
+                    <div className="activity-details">
+                      <p className="activity-name">{activity.activity}</p>
+                      <p className="activity-time">{activity.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-      <div style={styles.quickActions}>
-        <h2>Quick Actions</h2>
-        <div style={styles.actionButtons}>
-          <button style={styles.actionBtn} onClick={() => window.location.href = '/mood'}>
-            📊 Track Mood
-          </button>
-          <button style={styles.actionBtn} onClick={() => window.location.href = '/chat'}>
-            💬 Chat Support
-          </button>
-          <button style={styles.actionBtn} onClick={() => window.location.href = '/vr'}>
-            🌅 VR Experience
-          </button>
-        </div>
-      </div>
-
-      <div style={styles.quickMood}>
-        <h3>Quick Mood Check</h3>
-        <div style={styles.moodButtons}>
-          {[1,2,3,4,5,6,7,8,9,10].map(mood => (
-            <button 
-              key={mood}
-              style={{...styles.moodBtn, ...(todayMood === mood ? styles.selectedMood : {})}}
-              onClick={() => quickMoodLog(mood)}
-            >
-              {getMoodEmoji(mood)}
-            </button>
-          ))}
+            <div className="quick-actions">
+              <h2>Quick Actions</h2>
+              <div className="action-buttons">
+                <button className="action-btn primary">📝 Log Your Mood</button>
+                <button className="action-btn secondary">🎯 Set Daily Goal</button>
+                <button className="action-btn secondary">📈 View Progress</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
-}
-
-const styles = {
-  dashboard: {
-    padding: '20px',
-    maxWidth: '1200px',
-    margin: '0 auto',
-    fontFamily: 'Arial, sans-serif'
-  },
-  header: {
-    textAlign: 'center',
-    marginBottom: '30px',
-    color: '#333'
-  },
-  subtitle: {
-    color: '#666',
-    fontSize: '1.1em'
-  },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-    gap: '20px',
-    marginBottom: '30px'
-  },
-  statCard: {
-    background: 'white',
-    padding: '20px',
-    borderRadius: '10px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    textAlign: 'center'
-  },
-  moodDisplay: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px'
-  },
-  moodEmoji: {
-    fontSize: '2em'
-  },
-  streakNumber: {
-    fontSize: '2em',
-    color: '#4CAF50',
-    margin: '10px 0'
-  },
-  quickActions: {
-    marginBottom: '30px'
-  },
-  actionButtons: {
-    display: 'flex',
-    gap: '15px',
-    flexWrap: 'wrap',
-    justifyContent: 'center'
-  },
-  actionBtn: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '15px 25px',
-    borderRadius: '25px',
-    cursor: 'pointer',
-    fontSize: '1em',
-    transition: 'transform 0.2s'
-  },
-  quickMood: {
-    background: 'white',
-    padding: '20px',
-    borderRadius: '10px',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
-  },
-  moodButtons: {
-    display: 'flex',
-    gap: '10px',
-    flexWrap: 'wrap',
-    justifyContent: 'center'
-  },
-  moodBtn: {
-    background: '#f5f5f5',
-    border: 'none',
-    padding: '10px',
-    borderRadius: '50%',
-    cursor: 'pointer',
-    fontSize: '1.5em',
-    width: '50px',
-    height: '50px'
-  },
-  selectedMood: {
-    background: '#4CAF50',
-    transform: 'scale(1.1)'
-  }
 };
 
 export default Dashboard;
-
