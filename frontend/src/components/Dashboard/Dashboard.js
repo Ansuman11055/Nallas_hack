@@ -267,20 +267,47 @@ const Dashboard = () => {
     localStorage.setItem('isDarkMode', JSON.stringify(newTheme));
   };
 
-  const resetAllData = () => {
+const resetAllData = () => {
+  console.log('Reset button clicked');
+  try {
+    // Step 1: Close modal
+    console.log('Closing confirmation modal...');
+    setShowResetConfirm(false);
+    
+    // Step 2: Clear storage
+    console.log('Clearing localStorage...');
     localStorage.clear();
+    
+    // Step 3: Reset states
+    console.log('Resetting state variables...');
     setCurrentMood(5);
     setStreak(0);
     setAverageMood(5.0);
     setChatMessages([]);
     setMoodHistory([]);
     setUserProfile({ name: '', age: '', gender: '', isFirstTime: true });
-    setShowResetConfirm(false);
-    setShowProfile(true);
     
-    // Force page reload to clear cache
-    window.location.reload(true);
-  };
+    // Step 4: Close other modals
+    console.log('Closing other modals...');
+    setShowMoodLogger(false);
+    setShowChat(false);
+    setShowMoodHistory(false);
+    setIsVRActive(false);
+    setShowEmergencyContacts(false);
+    
+    console.log('Reset completed successfully!');
+    
+    // Step 5: Show profile
+    setTimeout(() => {
+      console.log('Opening profile setup...');
+      setShowProfile(true);
+    }, 500);
+    
+  } catch (error) {
+    console.error('Reset error:', error);
+    alert('Reset failed: ' + error.message);
+  }
+};
 
   const saveUserProfile = () => {
     if (userProfile.name.trim() && userProfile.age && userProfile.gender) {
