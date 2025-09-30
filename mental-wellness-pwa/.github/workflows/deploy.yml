@@ -57,7 +57,7 @@ jobs:
         path: build/
     
     - name: Deploy to Vercel (if configured)
-      if: ${{ secrets.VERCEL_TOKEN != null && secrets.VERCEL_TOKEN != '' }}
+      if: ${{ secrets.VERCEL_TOKEN != '' }}
       uses: amondnet/vercel-action@v25
       with:
         vercel-token: ${{ secrets.VERCEL_TOKEN }}
@@ -86,7 +86,7 @@ jobs:
           echo "✅ Deployed to Vercel successfully!"
         fi
       env:
-        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN || '' }}
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
   lighthouse-audit:
     needs: deploy-vercel
@@ -112,4 +112,4 @@ jobs:
         npm run build
         lhci autorun --config=./lighthouserc.js || echo "Lighthouse audit completed with issues"
       env:
-        LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || 'not-set' }}
+        LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN || '' }}
