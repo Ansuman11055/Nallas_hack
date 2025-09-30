@@ -1,20 +1,30 @@
-// Statistical algorithms for mental wellness baseline analysis
+// Statistical Analysis Algorithms for Mental Wellness Baseline Detection
 
-import { 
-  BaselineData, 
-  BehaviorMetrics, 
-  InterventionRecommendation, 
-  KeystrokeEvent, 
-  SessionEvent 
-} from '../types';
+export interface BaselineData {
+  rollingMean: number;
+  rollingStd: number;
+  zScore: number;
+  changePointDetected: boolean;
+  confidence: number;
+}
 
-/**
- * Calculate emotional baseline using Exponentially Weighted Moving Average (EWMA)
- * @param moodScores - Array of mood scores (1-5 scale)
- * @param windowSize - Rolling window size in days (default: 21)
- * @param alpha - EWMA smoothing factor (default: 0.1)
- * @returns BaselineData with statistical measures
- */
+export interface BehaviorMetrics {
+  typingLatencyMean: number;
+  burstCount: number;
+  sessionCount: number;
+  screenTime: number;
+  anomalyScore: number;
+}
+
+export interface InterventionRecommendation {
+  interventionId: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  reason: string;
+  estimatedDuration: number; // in minutes
+  confidence: number;
+}
+
+// Calculate emotional baseline using EWMA (Exponentially Weighted Moving Average)
 export function calculateBaseline(
   moodScores: number[],
   windowSize: number = 21,
@@ -22,370 +32,277 @@ export function calculateBaseline(
 ): BaselineData {
   if (moodScores.length === 0) {
     return {
-      rollingMean: 3.0, // Default neutral mood
+      rollingMean: 3.0,
       rollingStd: 1.0,
       zScore: 0,
-      changePointDetected: false
+      changePointDetected: false,
+      confidence: 0
     };
   }
 
-  // Calculate rolling mean using EWMA
-  let ewma = moodScores[0];
-  const ewmaValues: number[] = [ewma];
-  
-  for (let i = 1; i < moodScores.length; i++) {
-    ewma = alpha * moodScores[i] + (1 - alpha) * ewma;
-    ewmaValues.push(ewma);
-  }
-
-  // Calculate rolling standard deviation
+  // Calculate rolling statistics
   const recentScores = moodScores.slice(-windowSize);
-  const mean = recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length;
-  const variance = recentScores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) / recentScores.length;
+  const rollingMean = recentScores.reduce((sum, score) => sum + score, 0) / recentScores.length;
+  
+  // Calculate standard deviation
+  const variance = recentScores.reduce((sum, score) => sum + Math.pow(score - rollingMean, 2), 0) / recentScores.length;
   const rollingStd = Math.sqrt(variance);
-
-  // Calculate z-score for the most recent mood
-  const currentMood = moodScores[moodScores.length - 1];
-  const zScore = rollingStd > 0 ? (currentMood - mean) / rollingStd : 0;
-
-  // Detect change points (significant mood shifts)
+  
+  // Calculate z-score for most recent entry
+  const currentScore = moodScores[moodScores.length - 1];
+  const zScore = rollingStd > 0 ? (currentScore - rollingMean) / rollingStd : 0;
+  
+  // Detect change points (significant deviations)
   const changePointDetected = Math.abs(zScore) > 1.5;
-
+  
+  // Calculate confidence based on data points available
+  const confidence = Math.min(recentScores.length / windowSize, 1.0);
+  
   return {
-    rollingMean: mean,
-    rollingStd: Math.max(rollingStd, 0.1), // Avoid division by zero
+    rollingMean,
+    rollingStd,
     zScore,
-    changePointDetected
+    changePointDetected,
+    confidence
   };
 }
 
-/**
- * Analyze behavioral patterns from user interaction data
- * @param typingEvents - Array of keystroke timing events
- * @param sessionTimes - Array of session durations in milliseconds
- * @param screenEvents - Array of screen interaction events
- * @returns BehaviorMetrics with behavioral indicators
- */
+// Analyze behavioral patterns from interaction data
 export function analyzeBehaviorMetrics(
-  typingEvents: KeystrokeEvent[],
+  typingEvents: Array<{ timestamp: number; latency: number }>,
   sessionTimes: number[],
   screenEvents: Array<{ start: number; end: number }>
 ): BehaviorMetrics {
   // Keystroke dynamics analysis
-  const latencies = typingEvents.map(e => e.latency).filter(l => l > 0 && l < 2000); // Filter outliers
+  const latencies = typingEvents.map(e => e.latency);
   const typingLatencyMean = latencies.length > 0 
-    ? latencies.reduce((sum, l) => sum + l, 0) / latencies.length 
+    ? latencies.reduce((sum, lat) => sum + lat, 0) / latencies.length 
     : 0;
-
-  // Calculate typing bursts (rapid sequences of keystrokes)
+  
+  // Calculate typing bursts (rapid sequences)
   let burstCount = 0;
   for (let i = 1; i < typingEvents.length; i++) {
-    const timeDiff = typingEvents[i].timestamp - typingEvents[i - 1].timestamp;
-    if (timeDiff < 100) { // Less than 100ms between keystrokes
+    const timeDiff = typingEvents[i].timestamp - typingEvents[i-1].timestamp;
+    if (timeDiff < 200) { // Less than 200ms between keystrokes
       burstCount++;
     }
   }
-
+  
   // Session frequency analysis
   const sessionCount = sessionTimes.length;
   
   // Screen time calculation
-  const totalScreenTime = screenEvents.reduce((total, event) => {
+  const screenTime = screenEvents.reduce((total, event) => {
     return total + (event.end - event.start);
   }, 0);
-
-  // Anomaly detection using statistical methods
-  const sessionMean = sessionTimes.length > 0 
-    ? sessionTimes.reduce((sum, time) => sum + time, 0) / sessionTimes.length 
-    : 0;
   
-  const sessionStd = sessionTimes.length > 1 
-    ? Math.sqrt(sessionTimes.reduce((sum, time) => sum + Math.pow(time - sessionMean, 2), 0) / sessionTimes.length)
-    : 0;
-
-  // Calculate anomaly score based on recent session patterns
-  let anomalyScore = 0;
-  if (sessionTimes.length > 0 && sessionStd > 0) {
-    const recentSession = sessionTimes[sessionTimes.length - 1];
-    const zScore = Math.abs((recentSession - sessionMean) / sessionStd);
-    anomalyScore = Math.min(zScore / 3, 1); // Normalize to 0-1 scale
-  }
-
+  // Anomaly detection using statistical methods
+  const baselineLatency = 300; // ms baseline
+  const latencyDeviation = Math.abs(typingLatencyMean - baselineLatency) / baselineLatency;
+  const sessionDeviation = Math.abs(sessionCount - 5) / 5; // Assuming 5 sessions is normal
+  
+  const anomalyScore = (latencyDeviation + sessionDeviation) / 2;
+  
   return {
     typingLatencyMean,
     burstCount,
     sessionCount,
-    screenTime: totalScreenTime,
+    screenTime,
     anomalyScore
   };
 }
 
-/**
- * Select appropriate micro-intervention based on baseline and recent history
- * @param baseline - Current emotional baseline data
- * @param recentInterventions - Array of recently used intervention IDs
- * @returns InterventionRecommendation with suggested intervention
- */
+// Select appropriate micro-intervention based on current state
 export function selectMicroIntervention(
   baseline: BaselineData,
-  recentInterventions: string[]
+  recentInterventions: string[],
+  timeOfDay: number = new Date().getHours()
 ): InterventionRecommendation {
-  const { zScore, changePointDetected } = baseline;
+  const interventions = [
+    {
+      id: 'breathing_478',
+      name: '4-7-8 Breathing',
+      duration: 5,
+      conditions: ['anxiety', 'stress', 'negative_mood'],
+      timeRestrictions: []
+    },
+    {
+      id: 'grounding_54321',
+      name: '5-4-3-2-1 Grounding',
+      duration: 3,
+      conditions: ['anxiety', 'overwhelm', 'panic'],
+      timeRestrictions: []
+    },
+    {
+      id: 'positive_affirmation',
+      name: 'Positive Affirmations',
+      duration: 2,
+      conditions: ['low_mood', 'negative_thoughts'],
+      timeRestrictions: []
+    },
+    {
+      id: 'mindful_moment',
+      name: 'Mindful Moment',
+      duration: 5,
+      conditions: ['stress', 'distraction'],
+      timeRestrictions: []
+    },
+    {
+      id: 'vr_forest',
+      name: 'VR Forest Scene',
+      duration: 10,
+      conditions: ['high_stress', 'need_escape'],
+      timeRestrictions: [6, 22] // Only during daytime
+    },
+    {
+      id: 'progressive_relaxation',
+      name: 'Progressive Muscle Relaxation',
+      duration: 15,
+      conditions: ['physical_tension', 'sleep_prep'],
+      timeRestrictions: [18, 23] // Evening preferred
+    }
+  ];
   
-  // Define intervention priorities based on mood state
-  let interventionOptions: Array<{
-    id: string;
-    priority: 'low' | 'medium' | 'high' | 'urgent';
-    reason: string;
-    duration: number;
-  }> = [];
-
-  if (zScore > 1.5) {
-    // Positive mood spike - reinforce with positive interventions
-    interventionOptions = [
-      {
-        id: 'positive_affirmation',
-        priority: 'medium',
-        reason: 'Reinforce positive mood with affirmations',
-        duration: 2
-      },
-      {
-        id: 'gratitude_practice',
-        priority: 'medium',
-        reason: 'Build on positive emotions with gratitude',
-        duration: 3
-      },
-      {
-        id: 'mindful_moment',
-        priority: 'low',
-        reason: 'Maintain awareness of positive state',
-        duration: 5
-      }
-    ];
-  } else if (zScore < -1.5) {
-    // Negative mood spike - supportive interventions
-    interventionOptions = [
-      {
-        id: 'breathing_exercise',
-        priority: 'high',
-        reason: 'Regulate emotions with breathing',
-        duration: 4
-      },
-      {
-        id: 'grounding_technique',
-        priority: 'high',
-        reason: 'Ground yourself in the present moment',
-        duration: 5
-      },
-      {
-        id: 'vr_calming_scene',
-        priority: 'medium',
-        reason: 'Immersive relaxation experience',
-        duration: 10
-      }
-    ];
-  } else if (changePointDetected) {
-    // Significant mood change detected
-    interventionOptions = [
-      {
-        id: 'mindful_check_in',
-        priority: 'medium',
-        reason: 'Process recent mood changes mindfully',
-        duration: 3
-      },
-      {
-        id: 'emotion_labeling',
-        priority: 'medium',
-        reason: 'Identify and understand current emotions',
-        duration: 4
-      }
-    ];
-  } else {
-    // Stable mood - maintenance interventions
-    interventionOptions = [
-      {
-        id: 'daily_reflection',
-        priority: 'low',
-        reason: 'Maintain emotional awareness',
-        duration: 3
-      },
-      {
-        id: 'brief_meditation',
-        priority: 'low',
-        reason: 'Continue building mindfulness',
-        duration: 5
-      }
-    ];
+  // Determine current condition based on baseline
+  let currentCondition = 'neutral';
+  let priority: 'low' | 'medium' | 'high' | 'urgent' = 'low';
+  let reason = 'Maintaining wellness';
+  
+  if (baseline.zScore < -1.5) {
+    currentCondition = 'low_mood';
+    priority = 'high';
+    reason = 'Detected significant mood decline';
+  } else if (baseline.zScore < -1.0) {
+    currentCondition = 'negative_mood';
+    priority = 'medium';
+    reason = 'Mood below baseline';
+  } else if (baseline.changePointDetected && baseline.zScore < 0) {
+    currentCondition = 'stress';
+    priority = 'medium';
+    reason = 'Detected mood change point';
+  } else if (baseline.zScore > 1.5) {
+    currentCondition = 'positive_mood';
+    priority = 'low';
+    reason = 'Reinforcing positive state';
   }
-
-  // Filter out recently used interventions (within last 24 hours)
-  const availableInterventions = interventionOptions.filter(
-    intervention => !recentInterventions.includes(intervention.id)
-  );
-
-  // Select intervention with highest priority, or fallback to any available
-  const selectedIntervention = availableInterventions.length > 0 
-    ? availableInterventions.sort((a, b) => {
-        const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-      })[0]
-    : interventionOptions[0]; // Fallback to first option if all were recent
-
+  
+  // Filter interventions based on conditions and time
+  const suitableInterventions = interventions.filter(intervention => {
+    // Check if intervention addresses current condition
+    const addressesCondition = intervention.conditions.includes(currentCondition) ||
+                              intervention.conditions.includes('stress') ||
+                              intervention.conditions.includes('anxiety');
+    
+    // Check time restrictions
+    const timeOk = intervention.timeRestrictions.length === 0 ||
+                   (timeOfDay >= intervention.timeRestrictions[0] && 
+                    timeOfDay <= intervention.timeRestrictions[1]);
+    
+    // Avoid recent interventions (within last 24 hours)
+    const notRecent = !recentInterventions.includes(intervention.id);
+    
+    return addressesCondition && timeOk && notRecent;
+  });
+  
+  // Select intervention (prefer shorter ones for frequent use)
+  const selectedIntervention = suitableInterventions.length > 0
+    ? suitableInterventions.sort((a, b) => a.duration - b.duration)[0]
+    : interventions[0]; // Fallback to breathing exercise
+  
   return {
     interventionId: selectedIntervention.id,
-    priority: selectedIntervention.priority,
-    reason: selectedIntervention.reason,
-    estimatedDuration: selectedIntervention.duration
+    priority,
+    reason,
+    estimatedDuration: selectedIntervention.duration,
+    confidence: baseline.confidence
   };
 }
 
-/**
- * Detect mood trends over time
- * @param moodScores - Array of mood scores with timestamps
- * @param days - Number of days to analyze (default: 7)
- * @returns Trend analysis result
- */
-export function detectMoodTrends(
-  moodScores: Array<{ score: number; timestamp: Date }>,
-  days: number = 7
+// Calculate mood trend over time
+export function calculateMoodTrend(
+  moodScores: number[],
+  timestamps: Date[],
+  periodDays: number = 7
 ): {
   trend: 'improving' | 'declining' | 'stable';
   slope: number;
-  confidence: number;
+  correlation: number;
 } {
-  if (moodScores.length < 3) {
-    return { trend: 'stable', slope: 0, confidence: 0 };
+  if (moodScores.length < 2) {
+    return { trend: 'stable', slope: 0, correlation: 0 };
   }
-
-  // Filter to recent days
+  
+  // Filter data for the specified period
   const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - days);
+  cutoffDate.setDate(cutoffDate.getDate() - periodDays);
   
-  const recentScores = moodScores
-    .filter(entry => entry.timestamp >= cutoffDate)
-    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-
-  if (recentScores.length < 3) {
-    return { trend: 'stable', slope: 0, confidence: 0 };
+  const recentData = moodScores
+    .map((score, index) => ({ score, timestamp: timestamps[index] }))
+    .filter(item => item.timestamp >= cutoffDate);
+  
+  if (recentData.length < 2) {
+    return { trend: 'stable', slope: 0, correlation: 0 };
   }
-
-  // Calculate linear regression slope
-  const n = recentScores.length;
-  const sumX = recentScores.reduce((sum, _, i) => sum + i, 0);
-  const sumY = recentScores.reduce((sum, entry) => sum + entry.score, 0);
-  const sumXY = recentScores.reduce((sum, entry, i) => sum + i * entry.score, 0);
-  const sumXX = recentScores.reduce((sum, _, i) => sum + i * i, 0);
-
+  
+  // Calculate linear regression
+  const n = recentData.length;
+  const x = recentData.map((_, index) => index);
+  const y = recentData.map(item => item.score);
+  
+  const sumX = x.reduce((sum, val) => sum + val, 0);
+  const sumY = y.reduce((sum, val) => sum + val, 0);
+  const sumXY = x.reduce((sum, val, index) => sum + val * y[index], 0);
+  const sumXX = x.reduce((sum, val) => sum + val * val, 0);
+  const sumYY = y.reduce((sum, val) => sum + val * val, 0);
+  
   const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const correlation = (n * sumXY - sumX * sumY) / 
+    Math.sqrt((n * sumXX - sumX * sumX) * (n * sumYY - sumY * sumY));
   
-  // Calculate correlation coefficient for confidence
-  const meanX = sumX / n;
-  const meanY = sumY / n;
-  
-  const numerator = recentScores.reduce((sum, entry, i) => 
-    sum + (i - meanX) * (entry.score - meanY), 0);
-  const denomX = Math.sqrt(recentScores.reduce((sum, _, i) => 
-    sum + Math.pow(i - meanX, 2), 0));
-  const denomY = Math.sqrt(recentScores.reduce((sum, entry) => 
-    sum + Math.pow(entry.score - meanY, 2), 0));
-  
-  const correlation = denomX * denomY > 0 ? numerator / (denomX * denomY) : 0;
-  const confidence = Math.abs(correlation);
-
   // Determine trend
-  let trend: 'improving' | 'declining' | 'stable';
-  if (Math.abs(slope) < 0.1) {
-    trend = 'stable';
-  } else if (slope > 0) {
-    trend = 'improving';
-  } else {
-    trend = 'declining';
+  let trend: 'improving' | 'declining' | 'stable' = 'stable';
+  if (Math.abs(slope) > 0.1) { // Significant slope threshold
+    trend = slope > 0 ? 'improving' : 'declining';
   }
-
-  return { trend, slope, confidence };
+  
+  return { trend, slope, correlation };
 }
 
-/**
- * Calculate intervention effectiveness score
- * @param preInterventionMood - Mood score before intervention
- * @param postInterventionMood - Mood score after intervention
- * @param interventionType - Type of intervention used
- * @returns Effectiveness score (0-1 scale)
- */
-export function calculateInterventionEffectiveness(
-  preInterventionMood: number,
-  postInterventionMood: number,
-  interventionType: string
-): number {
-  const moodChange = postInterventionMood - preInterventionMood;
-  
-  // Different expectations based on intervention type
-  const expectedImprovements: Record<string, number> = {
-    'breathing_exercise': 0.5,
-    'grounding_technique': 0.7,
-    'positive_affirmation': 0.3,
-    'vr_calming_scene': 0.8,
-    'mindful_moment': 0.4,
-    'default': 0.5
+// Detect crisis keywords in text
+export function detectCrisisKeywords(text: string): {
+  detected: boolean;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  keywords: string[];
+} {
+  const crisisKeywords = {
+    critical: ['suicide', 'kill myself', 'end it all', 'want to die', 'better off dead'],
+    high: ['hopeless', 'worthless', 'can\'t go on', 'no point', 'give up'],
+    medium: ['depressed', 'anxious', 'overwhelmed', 'stressed', 'worried'],
+    low: ['sad', 'down', 'upset', 'frustrated', 'tired']
   };
-
-  const expectedImprovement = expectedImprovements[interventionType] || expectedImprovements.default;
   
-  // Normalize effectiveness (0-1 scale)
-  const effectiveness = Math.max(0, Math.min(1, moodChange / expectedImprovement));
+  const lowerText = text.toLowerCase();
+  const detectedKeywords: string[] = [];
+  let maxSeverity: 'low' | 'medium' | 'high' | 'critical' = 'low';
   
-  return effectiveness;
-}
-
-/**
- * Generate personalized insights from mood and behavior data
- * @param moodData - Recent mood entries
- * @param behaviorData - Recent behavior metrics
- * @returns Array of insight messages
- */
-export function generateInsights(
-  moodData: Array<{ score: number; timestamp: Date; tags: string[] }>,
-  behaviorData: BehaviorMetrics
-): string[] {
-  const insights: string[] = [];
+  // Check each severity level
+  for (const [severity, keywords] of Object.entries(crisisKeywords)) {
+    for (const keyword of keywords) {
+      if (lowerText.includes(keyword)) {
+        detectedKeywords.push(keyword);
+        if (severity === 'critical' || 
+           (severity === 'high' && maxSeverity !== 'critical') ||
+           (severity === 'medium' && !['critical', 'high'].includes(maxSeverity)) ||
+           (severity === 'low' && maxSeverity === 'low')) {
+          maxSeverity = severity as 'low' | 'medium' | 'high' | 'critical';
+        }
+      }
+    }
+  }
   
-  if (moodData.length === 0) {
-    return ['Start tracking your mood to see personalized insights here.'];
-  }
-
-  // Mood pattern insights
-  const recentMoods = moodData.slice(-7).map(d => d.score);
-  const avgMood = recentMoods.reduce((sum, score) => sum + score, 0) / recentMoods.length;
-  
-  if (avgMood >= 4) {
-    insights.push('Your mood has been consistently positive this week. Keep up the great work!');
-  } else if (avgMood <= 2) {
-    insights.push('Your mood has been lower recently. Consider trying some of the suggested interventions.');
-  }
-
-  // Tag-based insights
-  const tagCounts: Record<string, number> = {};
-  moodData.forEach(entry => {
-    entry.tags.forEach(tag => {
-      tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-    });
-  });
-
-  const mostCommonTag = Object.entries(tagCounts)
-    .sort(([,a], [,b]) => b - a)[0];
-  
-  if (mostCommonTag && mostCommonTag[1] > 2) {
-    insights.push(`You've been tracking "${mostCommonTag[0]}" frequently. Consider how this area affects your wellbeing.`);
-  }
-
-  // Behavior insights
-  if (behaviorData.anomalyScore > 0.7) {
-    insights.push('Your app usage patterns have changed recently. This might reflect changes in your routine or mood.');
-  }
-
-  if (behaviorData.sessionCount > 10) {
-    insights.push('You\'ve been actively engaging with the app. This consistent self-care is beneficial for your mental health.');
-  }
-
-  return insights.length > 0 ? insights : ['Keep tracking your mood to discover personalized insights.'];
+  return {
+    detected: detectedKeywords.length > 0,
+    severity: maxSeverity,
+    keywords: detectedKeywords
+  };
 }

@@ -1,34 +1,36 @@
-// Service Worker for Mental Wellness PWA
-// Provides offline functionality, caching, and background sync
+// Advanced Service Worker for MindWell PWA with Workbox-like functionality
+const CACHE_NAME = 'mindwell-v2.0.0';
+const STATIC_CACHE = 'mindwell-static-v2';
+const DYNAMIC_CACHE = 'mindwell-dynamic-v2';
+const OFFLINE_CACHE = 'mindwell-offline-v2';
 
-const CACHE_NAME = 'mindwell-v1.0.0';
-const OFFLINE_URL = '/offline.html';
-
-// Files to cache immediately
-const PRECACHE_URLS = [
+// Assets to cache immediately
+const STATIC_ASSETS = [
   '/',
-  '/offline.html',
-  '/manifest.json',
   '/static/js/bundle.js',
   '/static/css/main.css',
+  '/manifest.json',
+  '/offline.html',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
 ];
 
-// Install event - cache essential files
+// Install event - cache static assets
 self.addEventListener('install', (event) => {
-  console.log('[SW] Install event');
-  
+  console.log('Service Worker: Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Caching app shell');
-        return cache.addAll(PRECACHE_URLS);
+    Promise.all([
+      caches.open(STATIC_CACHE).then(cache => {
+        console.log('Service Worker: Caching static assets');
+        return cache.addAll(STATIC_ASSETS);
+      }),
+      caches.open(OFFLINE_CACHE).then(cache => {
+        return cache.add('/offline.html');
       })
-      .then(() => {
-        // Force the waiting service worker to become the active service worker
-        return self.skipWaiting();
-      })
+    ]).then(() => {
+      console.log('Service Worker: Installation complete');
+      return self.skipWaiting();
+    })
   );
 });
 
